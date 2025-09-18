@@ -2,12 +2,14 @@ module godog-examples
 
 go 1.25.1
 
-require github.com/cucumber/godog v0.15.1
+require (
+	github.com/cucumber/godog v0.15.1
+	github.com/stretchr/testify v1.8.2
+)
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/stretchr/testify v1.8.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
@@ -20,5 +22,4 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/oliveagle/jsonpath v0.0.0-20180606110733-2e52cf6e6852
 	github.com/spf13/pflag v1.0.7 // indirect
-	github.com/yogiis/golang-api-automation v0.0.0-20230923165909-37305693db39
 )

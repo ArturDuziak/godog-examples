@@ -10,13 +10,13 @@ import (
 
 	"github.com/cucumber/godog"
 	"github.com/oliveagle/jsonpath"
-	"github.com/yogiis/golang-api-automation/helper"
+	"github.com/stretchr/testify/assert"
 )
 
 type Entity struct {
 	UrlEndpoint  string
 	ResponseData *http.Response
-	Cases        helper.Case
+	Cases        Case
 	ResponseBody []byte
 }
 
@@ -30,15 +30,32 @@ func (e *Entity) SendPUTEndpointWithBodyJSON(params string, requestBody *godog.D
 	e.UrlEndpoint = e.UrlEndpoint + params
 
 	hitEndpoint, err := http.NewRequest(http.MethodPut, e.UrlEndpoint, bytes.NewBuffer([]byte(requestBody.Content)))
-	helper.LogPanicln(err)
+	LogPanicln(err)
 
 	hitEndpoint.Header.Add("Content-Type", "application/json")
 
 	e.ResponseData, err = sendHTTPRequest(hitEndpoint)
-	helper.LogPanicln(err)
+	LogPanicln(err)
 
 	e.ResponseBody, err = io.ReadAll(e.ResponseData.Body)
-	helper.LogPanicln(err)
+	LogPanicln(err)
+
+	defer e.ResponseData.Body.Close()
+
+	return nil
+}
+
+func (e *Entity) SendGETEndpointWithParams(params string) error {
+	e.UrlEndpoint = e.UrlEndpoint + params
+
+	hitEndpoint, err := http.NewRequest(http.MethodGet, e.UrlEndpoint, nil)
+	LogPanicln(err)
+
+	e.ResponseData, err = sendHTTPRequest(hitEndpoint)
+	LogPanicln(err)
+
+	e.ResponseBody, err = io.ReadAll(e.ResponseData.Body)
+	LogPanicln(err)
 
 	defer e.ResponseData.Body.Close()
 
@@ -57,7 +74,7 @@ var json_data map[string]interface{}
 
 func (e *Entity) ValidateResponseBody(path, expected string) error {
 	jsonpath, err := jsonpath.Compile(path)
-	helper.LogPanicln(err)
+	LogPanicln(err)
 
 	json.Unmarshal(e.ResponseBody, &json_data)
 	e.assertEqualByValue(jsonpath, expected)
@@ -65,17 +82,25 @@ func (e *Entity) ValidateResponseBody(path, expected string) error {
 	return nil
 }
 
+func (e *Entity) ValidateResponseBodyWithJSON(expectedJSON *godog.DocString) error {
+	if !assert.JSONEq(nil, expectedJSON.Content, string(e.ResponseBody)) {
+		return fmt.Errorf("JSON mismatch:\nExpected: %s\nActual: %s",
+			expectedJSON.Content, string(e.ResponseBody))
+	}
+	return nil
+}
+
 func (e *Entity) assertEqualByValue(jsonPath *jsonpath.Compiled, expected string) {
 	actual, err := jsonPath.Lookup(json_data)
-	helper.LogPanicln(err)
+	LogPanicln(err)
 
-	e.Cases.AssertEqual(expected, actual, helper.ErrorHandleEqual(expected, actual))
+	e.Cases.AssertEqual(expected, actual, ErrorHandleEqual(expected, actual))
 }
 
 func sendHTTPRequest(hitEndpoint *http.Request) (*http.Response, error) {
 	client := &http.Client{}
 	response, err := client.Do(hitEndpoint)
-	helper.LogPanicln(err)
+	LogPanicln(err)
 
 	return response, nil
 }
@@ -85,8 +110,10 @@ func InitializeScenario(ctx *godog.ScenarioContext) {
 
 	ctx.Step(`^I have an API "([^"]*)" with path "([^"]*)"$`, step.GivenEndpoint)
 	ctx.Step(`^I send a PUT request with params "([^"]*)" and following body:$`, step.SendPUTEndpointWithBodyJSON)
+	ctx.Step(`^I send a GET request with params "([^"]*)"$`, step.SendGETEndpointWithParams)
 	ctx.Step(`^status code should be (\d+)$`, step.ValidateStatusCode)
 	ctx.Step(`^value "([^"]*)" should equal "([^"]*)"$`, step.ValidateResponseBody)
+	ctx.Step(`^response body should be:$`, step.ValidateResponseBodyWithJSON)
 }
 
 func TestFeatures(t *testing.T) {
