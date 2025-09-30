@@ -2,6 +2,7 @@ package repeatedcharacters
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"testing"
 
@@ -49,14 +50,23 @@ func InitializeScenario(ctx *godog.ScenarioContext) {
 	ctx.Step(`^I should get "([^"]*)"$`, tc.iShouldGet)
 }
 
+var (
+	tags   = flag.String("godog.tags", "", "tags to execute")
+	format = flag.String("godog.format", "pretty", "format")
+)
+
+var opts = &godog.Options{
+	Paths: []string{"features"},
+}
+
 func TestFeatures(t *testing.T) {
+	opts.TestingT = t
+	opts.Tags = *tags
+	opts.Format = *format
+
 	suite := godog.TestSuite{
 		ScenarioInitializer: InitializeScenario,
-		Options: &godog.Options{
-			Format:   "pretty",
-			Paths:    []string{"features"},
-			TestingT: t,
-		},
+		Options:             opts,
 	}
 
 	if suite.Run() != 0 {
